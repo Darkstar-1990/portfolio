@@ -1,6 +1,81 @@
 (function () {
   var doc = document.documentElement;
   doc.classList.add('js');
+  function icon(n) {
+    return n ? '<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-' + n + '"/></svg>' : '';
+  }
+
+  // Capability map
+  var caps = document.querySelector('#capabilities .caps');
+  if (caps) {
+    var capItems = Array.prototype.slice.call(caps.children);
+    var hub = document.querySelector('#capabilities .hub');
+    var capMap = document.createElement('div');
+    capMap.className = 'cap-map';
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'lines');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.setAttribute('aria-hidden', 'true');
+    capMap.appendChild(svg);
+    capMap.appendChild(hub);
+    var bar2 = document.createElement('div');
+    bar2.className = 'cap-tabs';
+    bar2.setAttribute('role', 'tablist');
+    bar2.setAttribute('aria-label', 'Capabilities');
+    var lines = [];
+    var capTabs = capItems.map(function (li, i) {
+      var a = (-90 + 60 * i) * Math.PI / 180;
+      var x = 50 + 36 * Math.cos(a), y = 50 + 40 * Math.sin(a);
+      var ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', 50); ln.setAttribute('y1', 50);
+      ln.setAttribute('x2', x); ln.setAttribute('y2', y);
+      if (li.classList.contains('future')) ln.setAttribute('class', 'future');
+      svg.appendChild(ln);
+      lines.push(ln);
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.id = 'tab-' + li.id;
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-controls', li.id);
+      if (li.classList.contains('future')) b.classList.add('future');
+      b.style.setProperty('--x', x + '%');
+      b.style.setProperty('--y', y + '%');
+      b.innerHTML = icon(li.getAttribute('data-icon')) + '<span>' + li.querySelector('h3').innerHTML + '</span>';
+      li.setAttribute('role', 'tabpanel');
+      li.setAttribute('aria-labelledby', b.id);
+      li.setAttribute('tabindex', '0');
+      b.addEventListener('click', function () { pick(i, false); });
+      b.addEventListener('keydown', function (e) {
+        var n = null;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % capItems.length;
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = (i - 1 + capItems.length) % capItems.length;
+        if (e.key === 'Home') n = 0;
+        if (e.key === 'End') n = capItems.length - 1;
+        if (n !== null) { e.preventDefault(); pick(n, true); }
+      });
+      bar2.appendChild(b);
+      return b;
+    });
+    capMap.appendChild(bar2);
+    caps.parentNode.insertBefore(capMap, caps);
+    var legend = document.createElement('p');
+    legend.className = 'legend';
+    legend.textContent = 'Solid line: in place. Dashed line: future direction.';
+    caps.parentNode.insertBefore(legend, caps.nextSibling);
+    function pick(i, focus) {
+      capTabs.forEach(function (t, j) {
+        var on = i === j;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        capItems[j].hidden = !on;
+        lines[j].classList.toggle('on', on);
+      });
+      if (focus) capTabs[i].focus();
+    }
+    pick(0, false);
+  }
 
   // Lifecycle stages as tabs
   var list = document.querySelector('.lifecycle');
@@ -17,7 +92,7 @@
       b.id = 'tab-' + li.id;
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-controls', li.id);
-      b.innerHTML = '<span class="num">' + (i + 1) + '</span>' + h.textContent;
+      b.innerHTML = '<span class="num">' + icon(li.getAttribute('data-icon')) + '</span><span class="lbl">' + h.textContent + '</span>';
       li.setAttribute('role', 'tabpanel');
       li.setAttribute('aria-labelledby', b.id);
       li.setAttribute('tabindex', '0');
@@ -40,6 +115,7 @@
         t.setAttribute('aria-selected', on ? 'true' : 'false');
         t.tabIndex = on ? 0 : -1;
         stages[j].hidden = !on;
+        t.classList.toggle('done', j < i);
       });
       if (focus) tabs[i].focus();
     }
